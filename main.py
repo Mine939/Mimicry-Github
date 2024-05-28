@@ -99,6 +99,9 @@ def main():
     person_detector = PersonDetector()
     filter = Filter()                                   # Filter object 
 
+    person_timer = Timer()
+    person_detected_duration = 0
+
 
     show_curator = True
     img_idx = 0
@@ -192,25 +195,34 @@ def main():
         cv2.imshow(windowName, display_image)
 
         # Switching to Background Changer by being in frame for 5 seconds
-       # if show_curator:
-            #if not change_detected and person_detector.detect_person(camera_img_resized):
-                #timer.reset()
-                #if t >= current_time + wait_counter:
-                    #show_curator = not show_curator
-                    #change_detected = True
-                    #wait_counter += 10
-            #else:
-                #change_detected = False
+        if show_curator:
+            if person_detector.detect_person(camera_img):
+                if person_detected_duration == 0:
+                    person_timer.start()
+                person_detected_duration = person_timer.elapsed_time()
+                if person_detected_duration >= 5:
+                    show_curator = False
+                    person_detected_duration = 0
+                    person_timer.reset()
+            else:
+                person_detected_duration = 0
+                person_timer.reset()
+        else:
+            if person_detector.detect_person(camera_img):
+                person_detected_duration = 0
+                person_timer.reset()
             
 
         # Closing with gesture
         exit_gesture = False
         if not show_curator and hand_tracking.results.multi_hand_landmarks:
             exit_gesture = any(hand_tracking.close_window(landmark) for landmark in hand_tracking.results.multi_hand_landmarks)
-        #if exit_gesture and not exit_gesture_detected:
+        if exit_gesture and not exit_gesture_detected:
             # Exit the Background Changer and show curator
-            #show_curator = True
-            #exit_gesture_detected = True
+            show_curator = True
+            exit_gesture_detected = True
+            person_detected_duration = 0
+            person_timer.reset()
 
         if not exit_gesture:
             exit_gesture_detected = False
@@ -231,8 +243,7 @@ def main():
         if cv2.getWindowProperty(windowName, cv2.WND_PROP_VISIBLE) < 1:
             break
     
-    #timer.stop()
-    #timer.reset()
+
 
     vc.release()
     cv2.destroyAllWindows()
